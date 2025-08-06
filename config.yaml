@@ -1,0 +1,56 @@
+# AI Food Logger Configuration
+# Non-sensitive settings that can be checked into version control
+
+# Logging Configuration
+logging:
+  # Enable detailed tracing of AI API requests and responses
+  # Traces are written to ai_api_trace.log (excluded from git)
+  enable_ai_api_trace: true
+  
+  # Log level for general application logging
+  log_level: "INFO"
+  
+  # Maximum number of trace files to keep (rotated daily)
+  max_trace_files: 7
+
+# Food Analysis Settings
+food_analysis:
+  # Default serving size unit when not specified
+  default_serving_unit: "grams"
+  
+  # Confidence threshold for auto-accepting food entries
+  # Below this threshold, user confirmation may be requested
+  confidence_threshold: "medium"
+  
+  # Maximum number of retry attempts for API calls
+  max_retries: 3
+
+# Database Settings
+database:
+  # Google Sheets configuration
+  sheets:
+    # Default sheet names
+    foods_tab_name: "Foods"
+    log_tab_name: "Food Log"
+    
+    # Number of rows to read when checking for existing foods
+    max_lookup_rows: 1000
+
+# CLI Settings
+cli:
+  # Show detailed nutrition breakdown by default
+  show_detailed_output: true
+  
+  # Automatically open Google Sheets after logging food
+  auto_open_sheets: false
+  
+  # Default output format: "table", "json", "simple"
+  output_format: "table"
+
+# Development Settings
+development:
+  # Use mock clients instead of real APIs (for testing)
+  use_mock_clients: false
+  
+  # Enable debug mode with extra logging
+  debug_mode: false
