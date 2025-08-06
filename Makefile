@@ -31,20 +31,35 @@ setup:
 	@echo "2. Add your Gemini API key to config.ini"
 	@echo "3. Run: make log FOOD=\"your food description\""
 
-# Log food consumption
+# Log food consumption (requires FOOD parameter)
 log:
 	@if [ -z "$(FOOD)" ]; then \
-		echo "❌ Please provide food description:"; \
-		echo "   make log FOOD=\"160g grilled chicken breast\""; \
+		echo "❌ Error: FOOD parameter is required"; \
+		echo "Usage: make log FOOD='160g grilled chicken breast'"; \
+		echo "       make log FOOD='Turkey breast 121g, Core Power 26g Vanilla, 2 bananas'"; \
 		exit 1; \
 	fi
-	@if [ ! -f config.ini ]; then \
-		echo "❌ config.ini not found!"; \
-		echo "📋 Please copy config.ini.example to config.ini and add your API key"; \
+	@echo "🍽️  Analyzing food(s): $(FOOD)"
+	@cd $(PROJECT_DIR) && PYTHONPATH=. python3 -m food_logger "$(FOOD)"
+
+# Note: CSV export is now built into the main log command
+# No separate export step needed - meal_analysis.csv is created automatically
+
+# Clean up any stray CSV files (keeps only meal_analysis.csv)
+clean-csv:
+	@echo "🧹 Cleaning up stray CSV files..."
+	@cd $(PROJECT_DIR) && find . -name "*.csv" ! -name "meal_analysis.csv" -type f -delete 2>/dev/null || true
+	@echo "✅ Cleaned up. Only meal_analysis.csv will remain."
+
+# Log with Google Sheets integration
+log-sheets:
+	@if [ -z "$(FOOD)" ]; then \
+		echo "❌ Error: FOOD parameter is required"; \
+		echo "Usage: make log-sheets FOOD='Turkey breast 121g, Core Power 26g'"; \
 		exit 1; \
 	fi
-	@echo "🍽️  Analyzing: $(FOOD)"
-	./venv/bin/python food_logger.py "$(FOOD)"
+	@echo "🍽️  Analyzing and logging to Google Sheets: $(FOOD)"
+	@cd $(PROJECT_DIR) && PYTHONPATH=. python3 -c "from src.food_logger.gemini_client import main; import sys; sys.argv = ['', '$(FOOD)', '--sheets']; main()"
 
 # Run all tests
 test:

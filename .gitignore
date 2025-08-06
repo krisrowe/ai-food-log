@@ -128,9 +128,20 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# AI Food Logger specific files
-config.ini
+# AI API trace logs (contains API responses)
 ai_api_trace.log
-ai_api_trace_*.log
+gemini_trace.log
+
+# Configuration files with sensitive data
+config.ini
+*.key
+*.pem
+
+# Food analysis exports and data
+*.csv
+meal_analysis.csv
+test_system.py
+last_analysis.json
+food_analysis_*.json
 *.db
 service-account-key.json

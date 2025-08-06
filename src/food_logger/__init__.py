@@ -2,7 +2,7 @@
 AI Food Logger Package
 """
 
-from .core import FoodLoggerCore, FoodData, NutritionCalculation, ConsumptionEntry
+# Legacy imports removed - using new food_logger_service architecture
 from .gemini_client import GeminiClient
 from .sheets_client import SheetsClient
 

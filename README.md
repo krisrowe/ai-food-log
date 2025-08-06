@@ -20,8 +20,8 @@ An intelligent food logging system that uses natural language processing and Goo
 git clone <repository-url>
 cd ai-food-log
 
-# Simple setup - handles virtual environment automatically
-python run.py setup
+# Install dependencies
+pip install -r requirements.txt
 ```
 
 ### 2. Configure API Keys
@@ -38,55 +38,82 @@ cp config.ini.example config.ini
 
 ```bash
 # Log your food with natural language
-python run.py log "I ate 150g grilled chicken breast"
-python run.py log "26g Core Power Vanilla protein shake"
-python run.py log "1 cup of cooked quinoa"
+python -m food_logger "160g grilled chicken breast"
+python -m food_logger "26g Core Power Vanilla protein shake"
+python -m food_logger "1 cup of cooked quinoa"
+
+# Or use the Makefile
+make log FOOD="160g grilled chicken breast"
+make export  # Export to CSV
 ```
 
 ## 📖 Usage Examples
 
-### Whole Foods (Natural ingredients)
+### Single Food Analysis
 
 ```bash
-python run.py log "160g grilled chicken breast"
-# Output:
-# ✅ Whole food consistency - Chicken breast:
-#    Name: Grilled Chicken Breast
-#    Nutrition per 100g: 165.0 cal, 31.0g protein, 0.0g carbs, 3.0g fat
-#    Confidence: medium
+# Using Python module
+python -m food_logger "160g grilled chicken breast"
 
-python run.py log "100g raw salmon fillet"
-python run.py log "1 large egg"
-python run.py log "1 medium banana"
+# Using Makefile (recommended)
+make log FOOD="160g grilled chicken breast"
+
+# Output:
+# ✅ Successfully analyzed 1 food(s):
+# ================================================================================
+# 
+# 1. Grilled Chicken Breast
+#    User consumed: 160.0 g
+#    Standard serving: 100.0 g
+#    Scaling factor: 1.60x
+#    Calories: 264.0
+#    Protein: 49.6g | Carbs: 0.0g | Fat: 4.8g
+#    Confidence: 9.0/10
+#    Notes: Nutrition information based on average values for grilled chicken breast...
+# 
+# 📊 Meal analysis exported to meal_analysis.csv
 ```
 
-### Packaged Products (Branded items)
+### Multi-Food Analysis (Multiple foods in one command)
 
 ```bash
-python run.py log "26g Core Power Vanilla protein shake"
-# Output:
-# ✅ Packaged product - Core Power Vanilla:
-#    Name: Core Power Vanilla Protein Shake
-#    Nutrition per 1 bottle (26g): 110.0 cal, 20.0g protein, 7.0g carbs, 2.5g fat
-#    Confidence: medium
+make log FOOD="2 bananas and 1 apple"
+# Or:
+python -m food_logger "4 scoops protein powder, 2 bananas"
 
-python run.py log "1 Clif Bar Chocolate Chip"
-python run.py log "1 cup Chobani Greek Yogurt Plain"
+# Output:
+# ✅ Successfully analyzed 2 food(s):
+# ================================================================================
+# 
+# 1. Six Star Protein Powder (Chocolate)
+#    User consumed: 188.0 g
+#    Standard serving: 30.0 g
+#    Scaling factor: 6.27x
+#    Calories: 752.0
+#    Protein: 150.4g | Carbs: 18.8g | Fat: 9.4g
+#    Confidence: 8.0/10
+# 
+# 2. Banana
+#    User consumed: 2.0 medium
+#    Standard serving: 1.0 medium
+#    Scaling factor: 2.00x
+#    Calories: 210.0
+#    Protein: 2.0g | Carbs: 54.0g | Fat: 0.8g
+#    Confidence: 9.0/10
+# 
+# ================================================================================
+# TOTALS: 962 cal | 152.4g protein | 72.8g carbs | 10.2g fat
+# Average confidence: 8.5/10
 ```
 
-### Ambiguous Foods (May need clarification)
+### CSV Export
 
 ```bash
-python run.py log "1 cup of milk"
-# Output:
-# ✅ Ambiguous milk (needs fat % clarification):
-#    Name: Milk, cow's milk
-#    Confidence: high
-#    Notes: Data compiled from USDA FoodData Central and average values for whole milk.
-#           Values may vary slightly depending on the type of milk (e.g., skim, 2%, whole) and brand.
+# Export analysis to CSV (happens automatically)
+make export
 
-python run.py log "2 slices of bread"
-python run.py log "1 scoop protein powder"
+# View the CSV file
+cat meal_analysis.csv
 ```
 
 ## ⚙️ Configuration
@@ -112,8 +139,9 @@ service_account_key = path/to/your/service-account-key.json
 ```yaml
 # Logging Configuration
 logging:
-  # Enable detailed tracing of Gemini API requests and responses
-  enable_gemini_trace: false
+  # Enable detailed tracing of AI API requests and responses
+  # Traces are written to ai_api_trace.log (excluded from git)
+  enable_ai_api_trace: true
   log_level: "INFO"
   max_trace_files: 7
 
@@ -129,20 +157,20 @@ cli:
   output_format: "table"  # "table", "json", "simple"
 ```
 
-### Gemini API Tracing
+### AI API Tracing
 
 Enable detailed API tracing for debugging:
 
 ```yaml
 # In config.yaml
 logging:
-  enable_gemini_trace: true
+  enable_ai_api_trace: true
 ```
 
-Traces are written to `gemini_trace.log` in human-readable format:
+Traces are written to `ai_api_trace.log` in human-readable format:
 
 ```
-=== GEMINI API CALL ===
+=== AI API CALL ===
 Timestamp: 2025-01-06 01:15:30
 Input: "160g grilled chicken breast"
 
@@ -150,19 +178,34 @@ Request:
 {
   "contents": [{
     "parts": [{
-      "text": "Analyze the following food description..."
+      "text": "Analyze the following food description and return an array..."
     }]
   }]
 }
 
 Response:
-{
-  "food_name": "Grilled Chicken Breast",
-  "serving_size": "100g",
-  "calories_per_serving": 165.0,
-  "protein_g": 31.0,
-  "confidence": "medium"
-}
+================================================================================
+[
+  {
+    "food_name": "Grilled Chicken Breast",
+    "standard_serving": {
+      "amount": 100.0,
+      "unit": "g",
+      "calories": 165.0,
+      "protein_g": 31.0,
+      "carbs_g": 0.0,
+      "fat_g": 3.0
+    },
+    "user_consumed": {
+      "amount": 160.0,
+      "unit": "g",
+      "description": "160g grilled chicken breast"
+    },
+    "confidence_score": 9.0,
+    "source_notes": "Nutrition information based on average values..."
+  }
+]
+================================================================================
 
 Duration: 2.3s
 ========================
@@ -170,30 +213,37 @@ Duration: 2.3s
 
 ## 🧪 Testing
 
-### Run All Tests
+### All Tests
 
 ```bash
-python run.py test
-```
+# Run all tests using Makefile
+make test
 
-### Unit Tests (Fast, No API calls)
-
-```bash
-python run.py test-unit
+# Or run directly with pytest
+python -m pytest tests/ -v
 ```
 
 ### Integration Tests (Requires Gemini API key)
 
 ```bash
-python run.py test-integration
+# Run integration tests (requires GOOGLE_API_KEY)
+make test-integration
+
+# Or run directly
+python -m pytest tests/integration/ -v
 ```
 
-### Test Categories
+### Test Results
 
-- **Whole Foods**: Natural ingredients with stable nutrition (chicken, salmon, eggs)
-- **Packaged Products**: Branded items with fixed nutrition labels (Core Power, Clif Bars)
-- **Ambiguous Foods**: Items needing clarification ("milk" without fat %, "bread" without type)
-- **Exception Cases**: Invalid inputs, non-food items, edge cases
+```bash
+# Example successful test output:
+============= test session starts =============
+tests/integration/test_simple_integration.py::TestSimpleIntegration::test_single_food_analysis PASSED [ 25%]
+tests/integration/test_simple_integration.py::TestSimpleIntegration::test_multi_food_analysis PASSED [ 50%]
+tests/integration/test_simple_integration.py::TestSimpleIntegration::test_food_service_integration PASSED [ 75%]
+tests/integration/test_simple_integration.py::TestSimpleIntegration::test_csv_export_integration PASSED [100%]
+============= 4 passed in 10.74s ==============
+```
 
 ## 🏗️ Architecture
 
@@ -201,65 +251,78 @@ python run.py test-integration
 
 ```
 src/food_logger/
-├── core.py              # Core business logic and data models
-├── gemini_client.py     # Gemini API integration
-└── sheets_client.py     # Google Sheets integration
+├── __init__.py              # Package initialization
+├── __main__.py              # CLI entry point (python -m food_logger)
+├── food_logger_service.py   # Core business logic and meal processing
+├── gemini_client.py         # Gemini API integration with tracing
+└── sheets_client.py         # Google Sheets integration (placeholder)
 
 tests/
-├── unit/                # Fast unit tests with mocks
-└── integration/         # Real API integration tests
+├── __init__.py              # Package initialization
+├── unit/                    # Unit tests (placeholder)
+└── integration/             # Integration tests with real API
+    ├── __init__.py
+    └── test_simple_integration.py  # Working integration tests
 
-food_logger.py           # CLI interface
-run.py                   # Simple runner (handles venv, config)
+config.ini.example           # Configuration template
+config.yaml                  # Non-sensitive settings
+Makefile                     # Build and test automation
+requirements.txt             # Python dependencies
 ```
 
 ### Data Flow
 
 1. **Input**: Natural language food description
 2. **Analysis**: Gemini API extracts nutrition with Google Search grounding
-3. **Database Check**: Look for existing food in Google Sheets
-4. **Food Entry**: Create new food entry if needed
-5. **Consumption Log**: Record consumption with foreign key to food
-6. **Output**: Display nutrition breakdown and confidence
+3. **Processing**: FoodLoggerService calculates scaling factors and nutrition
+4. **Output**: Display nutrition breakdown with confidence scores
+5. **Export**: Automatically export analysis to CSV file
+6. **Logging**: Optional Google Sheets integration (planned feature)
 
-### Google Sheets Structure
+### Current Output Structure
 
-**Foods Tab** (Master database):
-| ID | Food Name | Serving Size | Calories | Protein | Carbs | Fat | Fiber | Sugar | Confidence | Source |
-|----|-----------|--------------|----------|---------|-------|-----|-------|-------|------------|--------|
-| 1  | Grilled Chicken Breast | 100g | 165 | 31.0 | 0.0 | 3.0 | 0.0 | 0.0 | medium | Gemini |
+**CSV Export** (`meal_analysis.csv`):
+| Food Name | User Consumed | Standard Serving | Scaling Factor | Calories | Protein (g) | Carbs (g) | Fat (g) | Fiber (g) | Sugar (g) | Sodium (mg) | Potassium (mg) | Vitamin C (mg) | Calcium (mg) | Iron (mg) | Confidence | Source Notes |
+|-----------|---------------|------------------|----------------|----------|-------------|----------|---------|----------|-----------|-------------|----------------|----------------|--------------|-----------|------------|---------------|
+| Grilled Chicken Breast | 160.0 g | 100.0 g | 1.60x | 264.0 | 49.6 | 0.0 | 4.8 | 0.0 | 0.0 | 112.0 | 480.0 | 0.0 | 16.0 | 1.6 | 9.0/10 | Nutrition information based on... |
+| TOTALS | | | | 264.0 | 49.6 | 0.0 | 4.8 | 0.0 | 0.0 | 112.0 | 480.0 | 0.0 | 16.0 | 1.6 | 9.0/10 | Analysis completed at 2025-01-06 03:23:50 |
 
-**Food Log Tab** (Daily consumption):
-| Date | Time | Food ID | Food Name | Amount | Calories | Protein | Carbs | Fat |
-|------|------|---------|-----------|--------|----------|---------|-------|-----|
-| 2025-01-06 | 12:30 | 1 | Grilled Chicken Breast | 160g | 264 | 49.6 | 0.0 | 4.8 |
+**Google Sheets Integration** (Planned Feature):
+- Master foods database with reusable nutrition data
+- Daily consumption logging with foreign keys
+- Automatic deduplication and food matching
 
 ## 🔧 Development
 
 ### Adding New Food Analyzers
 
 ```python
-from food_logger.core import FoodAnalyzer, FoodData
+from food_logger.food_logger_service import FoodLoggerService
+from food_logger.gemini_client import GeminiClient
 
-class MyFoodAnalyzer(FoodAnalyzer):
-    def analyze_food(self, description: str) -> Optional[FoodData]:
-        # Your implementation here
-        return FoodData(...)
+class MyFoodLoggerService(FoodLoggerService):
+    def process_meal(self, food_description: str, **kwargs):
+        # Your custom processing logic here
+        return super().process_meal(food_description, **kwargs)
 ```
 
-### Adding New Database Backends
+### Adding New AI Clients
 
 ```python
-from food_logger.core import FoodDatabase
+from food_logger.gemini_client import GeminiClient
 
-class MyFoodDatabase(FoodDatabase):
-    def find_food(self, food_name: str) -> Optional[FoodData]:
-        # Your implementation here
-        pass
-    
-    def save_food(self, food_data: FoodData) -> str:
-        # Your implementation here
-        pass
+class MyAIClient(GeminiClient):
+    def analyze_food(self, description: str) -> Optional[list]:
+        # Your implementation here (must return array of foods)
+        return [
+            {
+                'food_name': 'Your Food',
+                'standard_serving': {...},
+                'user_consumed': {...},
+                'confidence_score': 8.0,
+                'source_notes': 'Your source'
+            }
+        ]
 ```
 
 ### Debug Mode

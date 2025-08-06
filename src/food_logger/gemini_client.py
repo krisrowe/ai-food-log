@@ -11,10 +11,9 @@ import yaml
 from datetime import datetime
 from typing import Optional
 import google.generativeai as genai
-from .core import FoodData, FoodAnalyzer
 
 
-class GeminiClient(FoodAnalyzer):
+class GeminiClient:
     """Real Gemini API client implementation with tracing support"""
     
     def __init__(self, api_key: str = None):
@@ -27,7 +26,16 @@ class GeminiClient(FoodAnalyzer):
             raise ValueError("GOOGLE_API_KEY environment variable or api_key parameter is required")
         
         genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel('gemini-1.5-flash')
+        # Use latest Gemini Flash model for better nutrition analysis accuracy
+        self.model = genai.GenerativeModel(
+            'gemini-1.5-flash-latest',
+            generation_config=genai.types.GenerationConfig(
+                temperature=0.1,  # Lower temperature for more consistent nutrition facts
+                top_p=0.8,
+                top_k=20,
+                max_output_tokens=4096,
+            )
+        )
         
         # Load configuration for tracing
         self.config = self._load_config()
@@ -104,6 +112,11 @@ class GeminiClient(FoodAnalyzer):
                                 f.write(f"💊 {key}: {value}mg\n")
                             else:
                                 f.write(f"📊 {key}: {value}\n")
+                        
+                        # Add raw JSON for debugging
+                        f.write("\n" + "-" * 35 + " RAW JSON " + "-" * 35 + "\n")
+                        f.write(json.dumps(response_data, indent=2, ensure_ascii=False))
+                        f.write("\n")
                     else:
                         f.write(json.dumps(response_data, indent=2, ensure_ascii=False))
                 
@@ -112,39 +125,70 @@ class GeminiClient(FoodAnalyzer):
             # Don't let tracing errors break the main functionality
             print(f"Warning: Failed to write trace: {e}")
     
-    def analyze_food(self, description: str) -> Optional[FoodData]:
+
+    
+    def analyze_food(self, description: str) -> Optional[list]:
         """Analyze food description using Gemini API with Google Search grounding"""
         prompt = f"""
-        Analyze the following food description and provide detailed nutritional information grounded in reliable sources from Google Search.
+        Analyze the following food description(s) and provide detailed nutritional information grounded in reliable sources from Google Search.
         
         Food description: "{description}"
         
+        If multiple foods are listed, analyze each one separately. Return a JSON array of food objects.
+        If only one food is described, return an array with one object.
+        
+        CRITICAL: For each food, provide BOTH standard serving info AND the user's consumed amount separately:
+        
         Please return a JSON response with the following structure:
-        {{
-            "food_name": "Standardized food name",
-            "serving_amount": <serving amount as a number>,
-            "serving_unit": "g|ml|cup|tbsp|tsp|oz|lb|kg|piece|slice|medium|large|small",
-            "calories_per_serving": <calories per serving as a number>,
-            "protein_g": <protein in grams as a number>,
-            "carbs_g": <carbohydrates in grams as a number>,
-            "fat_g": <fat in grams as a number>,
-            "fiber_g": <fiber in grams as a number>,
-            "sugar_g": <sugar in grams as a number>,
-            "sodium_mg": <sodium in milligrams as a number>,
-            "potassium_mg": <potassium in milligrams as a number>,
-            "vitamin_c_mg": <vitamin C in milligrams as a number>,
-            "calcium_mg": <calcium in milligrams as a number>,
-            "iron_mg": <iron in milligrams as a number>,
-            "confidence_score": <confidence from 1-10, where 10 is highest confidence>,
-            "source_notes": "Brief note about data sources and any assumptions made"
-        }}
+        [
+            {{
+                "food_name": "Standardized food name",
+                "standard_serving": {{
+                    "amount": <standard serving amount as a number>,
+                    "unit": "g|ml|cup|tbsp|tsp|oz|lb|kg|piece|slice|medium|large|small",
+                    "calories": <calories per standard serving>,
+                    "protein_g": <protein in grams per standard serving>,
+                    "carbs_g": <carbohydrates in grams per standard serving>,
+                    "fat_g": <fat in grams per standard serving>,
+                    "fiber_g": <fiber in grams per standard serving>,
+                    "sugar_g": <sugar in grams per standard serving>,
+                    "sodium_mg": <sodium in milligrams per standard serving>,
+                    "potassium_mg": <potassium in milligrams per standard serving>,
+                    "vitamin_c_mg": <vitamin C in milligrams per standard serving>,
+                    "calcium_mg": <calcium in milligrams per standard serving>,
+                    "iron_mg": <iron in milligrams per standard serving>
+                }},
+                "user_consumed": {{
+                    "amount": <amount user actually consumed as a number>,
+                    "unit": "g|ml|cup|tbsp|tsp|oz|lb|kg|piece|slice|medium|large|small",
+                    "description": "Exact description of what user said they ate"
+                }},
+                "confidence_score": <confidence from 1-10, where 10 is highest confidence>,
+                "source_notes": "Brief note about data sources and any assumptions made"
+            }}
+        ]
         
         Important guidelines:
         - Use Google Search to find accurate, up-to-date nutrition information
         - Provide standardized food names that would be consistent across queries
-        - Split serving size into amount (number) and unit (enum from list above)
+        - For standard_serving: Use typical/official serving sizes (e.g., 100g for chicken, 1 cup for milk, 1 medium for banana)
+        - For user_consumed: Extract exactly what the user said they ate, preserving their units and amounts
         - Use 'g' for solids, 'ml' for liquids, or appropriate volume/count units
-        - Score confidence 1-10: 9-10=very reliable data, 7-8=good data, 5-6=reasonable estimates, 3-4=rough estimates, 1-2=very uncertain
+        - The system will handle conversions and scaling calculations after parsing
+        
+        CRITICAL - Confidence scoring (1-10):
+        - 9-10: Very specific foods with reliable data (e.g., "160g grilled chicken breast", "1 large egg")
+        - 7-8: Good specificity with solid data (e.g., "100g salmon fillet", "1 cup whole milk")
+        - 5-6: Reasonable estimates for moderately specific foods
+        - 3-4: Rough estimates for ambiguous foods (e.g., "chicken" could be fried/grilled/nuggets)
+        - 1-2: Very uncertain - extremely vague or nonsensical input
+        
+        AMBIGUITY DETECTION - Use LOW confidence (≤4) for vague inputs like:
+        - "chicken" (could be fried, grilled, breast, thigh, nuggets, etc.)
+        - "fish" (species and preparation method unknown)
+        - "pasta" (type, sauce, and preparation unknown)
+        - "bread" (white/wheat/sourdough, size unknown)
+        
         - If the food description is ambiguous, make reasonable assumptions and note them in source_notes
         - For branded products, try to find the specific product's nutrition facts
         - Return only valid JSON, no additional text
@@ -167,34 +211,107 @@ class GeminiClient(FoodAnalyzer):
             duration = time.time() - start_time
             
             # Extract JSON from response (handle potential markdown formatting)
-            json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
-            if json_match:
-                json_str = json_match.group(0)
+            # Look for array format first, then fallback to object format
+            array_match = re.search(r'\[.*\]', response_text, re.DOTALL)
+            object_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+            
+            if array_match:
+                json_str = array_match.group(0)
                 data = json.loads(json_str)
                 response_data = data
                 
                 # Write trace if enabled
                 self._write_trace(description, request_data, response_data, duration)
                 
-                # Return the raw JSON dictionary with validated structure
-                return {
-                    'food_name': data.get('food_name', ''),
-                    'serving_amount': float(data.get('serving_amount', 0)),
-                    'serving_unit': data.get('serving_unit', 'g'),
-                    'calories_per_serving': float(data.get('calories_per_serving', 0)),
-                    'protein_g': float(data.get('protein_g', 0)),
-                    'carbs_g': float(data.get('carbs_g', 0)),
-                    'fat_g': float(data.get('fat_g', 0)),
-                    'fiber_g': float(data.get('fiber_g', 0)),
-                    'sugar_g': float(data.get('sugar_g', 0)),
-                    'sodium_mg': float(data.get('sodium_mg', 0)),
-                    'potassium_mg': float(data.get('potassium_mg', 0)),
-                    'vitamin_c_mg': float(data.get('vitamin_c_mg', 0)),
-                    'calcium_mg': float(data.get('calcium_mg', 0)),
-                    'iron_mg': float(data.get('iron_mg', 0)),
-                    'confidence_score': float(data.get('confidence_score', 1)),
-                    'source_notes': data.get('source_notes', '')
-                }
+                # Return the array of food dictionaries with new two-part structure
+                foods = []
+                for i, item in enumerate(data):
+                    try:
+                        # Extract standard serving info
+                        standard = item.get('standard_serving', {})
+                        user_consumed = item.get('user_consumed', {})
+                        
+                        foods.append({
+                            'food_name': item.get('food_name', ''),
+                            'standard_serving': {
+                                'amount': float(standard.get('amount') or 0),
+                                'unit': standard.get('unit', 'g'),
+                                'calories': float(standard.get('calories') or 0),
+                                'protein_g': float(standard.get('protein_g') or 0),
+                                'carbs_g': float(standard.get('carbs_g') or 0),
+                                'fat_g': float(standard.get('fat_g') or 0),
+                                'fiber_g': float(standard.get('fiber_g') or 0),
+                                'sugar_g': float(standard.get('sugar_g') or 0),
+                                'sodium_mg': float(standard.get('sodium_mg') or 0),
+                                'potassium_mg': float(standard.get('potassium_mg') or 0),
+                                'vitamin_c_mg': float(standard.get('vitamin_c_mg') or 0),
+                                'calcium_mg': float(standard.get('calcium_mg') or 0),
+                                'iron_mg': float(standard.get('iron_mg') or 0)
+                            },
+                            'user_consumed': {
+                                'amount': float(user_consumed.get('amount') or 0),
+                                'unit': user_consumed.get('unit', 'g'),
+                                'description': user_consumed.get('description', '')
+                            },
+                            'confidence_score': float(item.get('confidence_score') or 1),
+                            'source_notes': item.get('source_notes', '')
+                        })
+                    except (ValueError, TypeError) as e:
+                        print(f"Warning: Error parsing food item {i+1}: {e}")
+                        print(f"Item data: {item}")
+                        # Skip this item and continue
+                        continue
+                
+                # Save results for CSV export
+
+                return foods
+            elif object_match:
+                # Fallback for single object responses - wrap in array
+                json_str = object_match.group(0)
+                data = json.loads(json_str)
+                response_data = [data]  # Wrap single object in array for consistent logging
+                
+                # Write trace if enabled
+                self._write_trace(description, request_data, response_data, duration)
+                
+                # Return single food wrapped in array with new schema
+                try:
+                    standard = data.get('standard_serving', {})
+                    user_consumed = data.get('user_consumed', {})
+                    
+                    foods = [{
+                        'food_name': data.get('food_name', ''),
+                        'standard_serving': {
+                            'amount': float(standard.get('amount') or 0),
+                            'unit': standard.get('unit', 'g'),
+                            'calories': float(standard.get('calories') or 0),
+                            'protein_g': float(standard.get('protein_g') or 0),
+                            'carbs_g': float(standard.get('carbs_g') or 0),
+                            'fat_g': float(standard.get('fat_g') or 0),
+                            'fiber_g': float(standard.get('fiber_g') or 0),
+                            'sugar_g': float(standard.get('sugar_g') or 0),
+                            'sodium_mg': float(standard.get('sodium_mg') or 0),
+                            'potassium_mg': float(standard.get('potassium_mg') or 0),
+                            'vitamin_c_mg': float(standard.get('vitamin_c_mg') or 0),
+                            'calcium_mg': float(standard.get('calcium_mg') or 0),
+                            'iron_mg': float(standard.get('iron_mg') or 0)
+                        },
+                        'user_consumed': {
+                            'amount': float(user_consumed.get('amount') or 0),
+                            'unit': user_consumed.get('unit', 'g'),
+                            'description': user_consumed.get('description', '')
+                        },
+                        'confidence_score': float(data.get('confidence_score') or 1),
+                        'source_notes': data.get('source_notes', '')
+                    }]
+                except (ValueError, TypeError) as e:
+                    print(f"Warning: Error parsing single food item: {e}")
+                    print(f"Item data: {data}")
+                    return None
+                
+                # Save results for CSV export
+
+                return foods
             else:
                 error_msg = f"Could not extract JSON from response: {response_text}"
                 duration = time.time() - start_time
@@ -208,3 +325,43 @@ class GeminiClient(FoodAnalyzer):
             self._write_trace(description, request_data, {}, duration, error_msg)
             print(f"Error analyzing food with Gemini: {e}")
             return None
+
+
+def main():
+    """Thin CLI interface - delegates all business logic to FoodLoggerService"""
+    import sys
+    from .food_logger_service import FoodLoggerService
+    
+    # Parse command line arguments
+    if len(sys.argv) < 2:
+        print("Usage: python -m src.food_logger 'food description' [--csv] [--sheets]")
+        print("Example: python -m src.food_logger '160g grilled chicken breast'")
+        print("Multi-food: python -m src.food_logger 'Turkey 121g, Core Power 26g, 2 bananas'")
+        print("With CSV: python -m src.food_logger 'Turkey 121g, Core Power 26g' --csv")
+        print("With Sheets: python -m src.food_logger 'Turkey 121g, Core Power 26g' --sheets")
+        return 1
+    
+    food_description = sys.argv[1]
+    export_csv = '--csv' in sys.argv or True  # Always export CSV for now
+    log_sheets = '--sheets' in sys.argv
+    
+    # Delegate to core service
+    try:
+        service = FoodLoggerService()
+        analysis = service.process_meal(food_description, export_csv=export_csv, log_sheets=log_sheets)
+        
+        if analysis:
+            # Display results (formatting handled by service)
+            print(service.format_console_output(analysis))
+            return 0
+        else:
+            print("❌ Failed to analyze meal")
+            return 1
+            
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return 1
+
+
+if __name__ == '__main__':
+    exit(main())
