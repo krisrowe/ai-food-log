@@ -1,0 +1,16 @@
+[
+  {
+    "food_name": "Test Food",
+    "standard_serving": {
+      "size": {"amount": 100, "unit": "g"},
+      "nutrition": {"calories": 150, "protein": 25, "carbs": 0, "fat": 5}
+    },
+    "consumed": {
+      "size": {"amount": 200, "unit": "g"}
+    },
+    "servings": {"calculable": true},
+    "user_description": "Two servings",
+    "confidence_score": 10,
+    "source_notes": "Test data"
+  }
+]

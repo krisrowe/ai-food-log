@@ -1,6 +1,9 @@
 # AI Food Logger Makefile
 .PHONY: setup test test-unit test-integration log clean help
 
+# Project directory (current directory)
+PROJECT_DIR := $(shell pwd)
+
 # Default target
 help:
 	@echo "🍎 AI Food Logger"
@@ -40,7 +43,9 @@ log:
 		exit 1; \
 	fi
 	@echo "🍽️  Analyzing food(s): $(FOOD)"
-	@cd $(PROJECT_DIR) && PYTHONPATH=. python3 -m food_logger "$(FOOD)"
+	@echo "Working directory: $$(pwd)"
+	@echo "Python path: $(PROJECT_DIR)"
+	@cd $(PROJECT_DIR) && PYTHONPATH=. ./venv/bin/python3 -m src.food_logger "$(FOOD)"
 
 # Note: CSV export is now built into the main log command
 # No separate export step needed - meal_analysis.csv is created automatically
@@ -59,26 +64,19 @@ log-sheets:
 		exit 1; \
 	fi
 	@echo "🍽️  Analyzing and logging to Google Sheets: $(FOOD)"
-	@cd $(PROJECT_DIR) && PYTHONPATH=. python3 -c "from src.food_logger.gemini_client import main; import sys; sys.argv = ['', '$(FOOD)', '--sheets']; main()"
+	@cd $(PROJECT_DIR) && PYTHONPATH=. ./venv/bin/python3 -m src.food_logger "$(FOOD)" --sheets
 
 # Run all tests
 test:
-	@echo "🧪 Running all tests..."
-	./venv/bin/pytest -v
-
-# Run unit tests only
-test-unit:
-	@echo "🧪 Running unit tests..."
-	./venv/bin/pytest tests/unit/ -v
-
-# Run integration tests
-test-integration:
-	@echo "🧪 Running integration tests..."
+	@echo "🧪 Running all tests (unit and integration)..."
 	@if [ ! -f config.ini ]; then \
-		echo "❌ config.ini required for integration tests"; \
-		exit 1; \
+		echo "⚠️ Warning: config.ini not found. Integration tests will be skipped."; \
+		echo "Running unit tests only..."; \
+		PYTHONPATH=src ./venv/bin/pytest tests/unit/ -v; \
+	else \
+		PYTHONPATH=src ./venv/bin/pytest -v; \
 	fi
-	./venv/bin/pytest tests/integration/ -v -m integration
+
 
 # Enable AI API tracing
 trace-on:

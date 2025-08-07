@@ -138,10 +138,10 @@ config.ini
 *.pem
 
 # Food analysis exports and data
-*.csv
 meal_analysis.csv
 test_system.py
 last_analysis.json
 food_analysis_*.json
 *.db
 service-account-key.json
+*.csv

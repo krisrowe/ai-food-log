@@ -1,0 +1,10 @@
+# Configuration for the test suite
+
+tolerances:
+  # Absolute tolerance for nutritional value comparisons.
+  # The final margin will be the greater of this value or the relative tolerance.
+  absolute: 2.0
+
+  # Relative (percentage) tolerance for nutritional value comparisons.
+  # e.g., 0.20 means a 20% margin of error.
+  relative: 0.20

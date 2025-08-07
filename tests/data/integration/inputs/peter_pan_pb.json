@@ -1,0 +1,36 @@
+{
+  "prompt": "2 servings of peter pan peanut butter",
+  "expected_api_response": [
+    {
+      "food_name": "Peter Pan Peanut Butter",
+      "standard_serving": {
+        "size": { "amount": 32, "unit": "g" },
+        "alt_size": { "amount": 2, "unit": "tbsp" },
+        "nutrition": {
+          "calories": 200,
+          "protein": 8,
+          "carbs": 7,
+          "fat": 16,
+          "fiber": 2,
+          "sugar": 3,
+          "sodium": 125,
+          "potassium": 180,
+          "vitamin_c": 0,
+          "calcium": 20,
+          "iron": 0.5
+        }
+      },
+      "consumed": {
+        "size_options": [
+          { "amount": 64, "unit": "g" },
+          { "amount": 4, "unit": "tbsp" }
+        ]
+      },
+      "servings": {
+        "calculable": true
+      },
+      "confidence_score": 9,
+      "source_notes": "Assumed 'Peter Pan Creamy' as the most common variant. User's '2 servings' was resolved to 64g based on the standard 32g serving size."
+    }
+  ]
+}

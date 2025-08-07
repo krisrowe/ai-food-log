@@ -1,0 +1,36 @@
+{
+  "prompt": "2 47g scoops of chocolate six star pro protein powder",
+  "expected_api_response": [
+    {
+      "food_name": "Six Star Pro Nutrition 100% Whey Protein Plus",
+      "standard_serving": {
+        "size": { "amount": 47, "unit": "g" },
+        "alt_size": { "amount": 1, "unit": "scoop" },
+        "nutrition": {
+          "calories": 180,
+          "protein": 30,
+          "carbs": 8,
+          "fat": 3,
+          "fiber": 1,
+          "sugar": 2,
+          "sodium": 160,
+          "potassium": 260,
+          "vitamin_c": 0,
+          "calcium": 150,
+          "iron": 1.2
+        }
+      },
+      "consumed": {
+        "size_options": [
+          { "amount": 2, "unit": "scoop" },
+          { "amount": 94, "unit": "g" }
+        ]
+      },
+      "servings": {
+        "calculable": true
+      },
+      "confidence_score": 10,
+      "source_notes": "Matched to the 'Triple Chocolate' flavor. User's 'scoop' unit is logically compatible with the standard serving."
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "processed_foods": [
+    {
+      "food_name": "Peter Pan Creamy Peanut Butter",
+      "standard_serving": {
+        "size": { "amount": 32, "unit": "g" },
+        "alt_size": { "amount": 2, "unit": "tbsp" },
+        "nutrition": {
+          "calories": 200,
+          "protein": 8,
+          "carbs": 7,
+          "fat": 16,
+          "fiber": 2,
+          "sugar": 3,
+          "sodium": 125,
+          "potassium": 180,
+          "vitamin_c": 0,
+          "calcium": 20,
+          "iron": 0.5
+        }
+      },
+      "consumed": {
+        "size": { "amount": 64, "unit": "g" },
+        "standard_servings": 2.0,
+        "nutrition": {
+          "calories": 400.0,
+          "protein": 16.0,
+          "carbs": 14.0,
+          "fat": 32.0,
+          "fiber": 4.0,
+          "sugar": 6.0,
+          "sodium": 250.0,
+          "potassium": 360.0,
+          "vitamin_c": 0.0,
+          "calcium": 40.0,
+          "iron": 1.0
+        }
+      },
+      "user_description": "2 servings of peter pan peanut butter",
+      "confidence_score": 9,
+      "source_notes": "Assumed 'Peter Pan Creamy' as the most common variant. User's '2 servings' was resolved to 64g based on the standard 32g serving size.",
+      "food_id": null
+    }
+  ],
+  "totals": {
+    "calories": 400.0,
+    "protein": 16.0,
+    "carbs": 14.0,
+    "fat": 32.0,
+    "fiber": 4.0,
+    "sugar": 6.0,
+    "sodium": 250.0,
+    "potassium": 360.0,
+    "vitamin_c": 0.0,
+    "calcium": 40.0,
+    "iron": 1.0
+  }
+}

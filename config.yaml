@@ -1,6 +1,15 @@
 # AI Food Logger Configuration
 # Non-sensitive settings that can be checked into version control
 
+# Output method: 'csv' or 'sheets'
+output_method: 'csv'
+
+# Gemini Model
+# Tested models:
+# - 'gemini-2.5-flash' (fast, cost-effective)
+# - 'gemini-2.5-pro' (more powerful, for higher quality analysis)
+gemini_model: 'gemini-2.5-pro'
+
 # Logging Configuration
 logging:
   # Enable detailed tracing of AI API requests and responses
