@@ -98,7 +98,6 @@ def test_long_name_product():
     _run_contract_test("six_star_protein.json")
 
 @pytest.mark.integration
-@pytest.mark.skip(reason="Multi-product prompts are not yet supported")
 def test_multiple_products():
     """Tests the API contract for a prompt with multiple food items."""
     _run_contract_test("multiple_products.json")

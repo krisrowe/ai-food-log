@@ -22,6 +22,7 @@ def format_console_output(result: FinalResult) -> str:
     
     for i, food in enumerate(analysis.processed_foods, 1):
         output.append(f"\n{i}. {food.food_name}")
+        output.append(f"   Input: \"{food.user_description}\"")
         # Note: Accessing nested dictionary-like structures from the model
         output.append(f"   User consumed: {food.consumed.size.amount} {food.consumed.size.unit}")
         output.append(f"   Standard serving: {food.standard_serving.size.amount} {food.standard_serving.size.unit}")

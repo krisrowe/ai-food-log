@@ -6,6 +6,7 @@ An intelligent food logging system that uses natural language processing and Goo
 
 - **Natural Language Input**: "I ate 150g of grilled chicken breast" → Structured nutrition data
 - **AI-Powered Analysis**: Uses Google's Gemini API with Google Search grounding for accurate nutrition
+- **Multi-Food Analysis**: Log an entire meal in a single command (e.g., "2 eggs, 1 slice of toast, and a banana").
 - **Multiple Output Formats**: Supports CSV and Google Sheets.
 - **Unit Conversion**: Handles grams, ounces, cups, and other common units
 - **Serving Size Calculations**: Automatically scales nutrition based on actual consumption
@@ -27,21 +28,20 @@ make setup
 ### 2. Configure API Keys
 
 ```bash
-# Copy the example config
-cp config.ini.example config.ini
-cp config.yaml.example config.yaml
+# Copy the environment file example
+cp .env.example .env
 
-# Edit config.ini with your API keys
-# Get Gemini API key from: https://makersuite.google.com/app/apikey
+# Edit .env and add your API keys and Google Sheet details
 ```
 
 ### 3. Start Logging Food!
 
 ```bash
-# Log your food with natural language
+# Log a single food item
 make log FOOD="160g grilled chicken breast"
-make log FOOD="26g Core Power Vanilla protein shake"
-make log FOOD="1 cup of cooked quinoa"
+
+# Log an entire meal at once
+make log FOOD="2 bananas, 1 great value fiber brownie, and 4 scoops of protein powder"
 ```
 
 ## 📖 Usage
@@ -58,14 +58,6 @@ This project uses a `Makefile` for common development tasks.
 | `make test-integration` | Runs only the integration tests (requires a configured API key). |
 | `make clean` | Removes all generated files, such as virtual environments and cache files. |
 | `make help` | Displays a list of all available commands. |
-
-### ⚠️ Known Limitations
-
-- **Multi-Product Prompts**: The system currently struggles with prompts containing multiple, comma-separated food items. This is a known issue and is being actively worked on. While you can try it, it may not produce the expected results.
-  - **Example of an experimental multi-product prompt:**
-    ```bash
-    make log FOOD="121g turkey breast, 1 great value fiber brownie, 2 bananas"
-    ```
 
 ## ⚙️ Configuration
 

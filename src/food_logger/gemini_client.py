@@ -100,6 +100,7 @@ class GeminiClient:
         
         CRITICAL GUIDELINES:
         - For each food item, you MUST populate the `user_description` field. This field should contain the exact substring from the user's original prompt that corresponds to that specific food item.
+        - For all `unit` fields: Use standardized, singular units (e.g., "g", "ml", "cup", "scoop", "slice", "banana"). Avoid plural forms like "bananas".
         - For food_name: 
           - Your primary goal is to identify and return a standardized food name. It is critical that you use a consistent naming approach that is likely to yield the same result every time for the same food.
           - If the food is a packaged product, use its official product name (e.g., "Six Star Pro Nutrition 100% Whey Protein Plus").
@@ -125,42 +126,55 @@ class GeminiClient:
         response_data = {}
         error_msg = None
         
-        try:
-            response = self.model.generate_content(prompt)
-            
-            if not response.candidates:
-                print("--- MODEL RESPONSE ERROR: NO CANDIDATES ---")
-                print(response)
-                print("-------------------------------------------")
-                raise ValueError("The model returned no candidates. This may be due to a safety block or an issue with the prompt. See details above.")
+        # Retry logic: Attempt the API call up to 2 times
+        for attempt in range(2):
+            try:
+                response = self.model.generate_content(prompt)
+                
+                if not response.candidates:
+                    print("--- FULL GEMINI RESPONSE ON FAILURE ---")
+                    print(response)
+                    print("---------------------------------------")
+                    raise ValueError("The model returned no candidates. This may be due to a safety block.")
 
-            candidate = response.candidates[0]
-            if not candidate.content.parts:
-                error_details = f"Finish Reason: {candidate.finish_reason.name if candidate.finish_reason else 'N/A'}. " \
-                              f"Safety Ratings: {[str(rating) for rating in candidate.safety_ratings]}"
-                raise ValueError(f"The model returned a candidate with no content parts. Details: {error_details}")
+                candidate = response.candidates[0]
+                if not candidate.content.parts:
+                    # This is the specific intermittent error we want to retry.
+                    # Log the full response to see the safety ratings and finish reason.
+                    print("--- FULL GEMINI RESPONSE ON FAILURE ---")
+                    print(response)
+                    print("---------------------------------------")
+                    error_details = f"Finish Reason: {candidate.finish_reason.name if candidate.finish_reason else 'N/A'}. " \
+                                  f"Safety Ratings: {[str(rating) for rating in candidate.safety_ratings]}"
+                    raise ValueError(f"The model returned a candidate with no content parts. Details: {error_details}")
 
-            response_part = candidate.content.parts[0]
-            
-            if not response_part.function_call or response_part.function_call.name != "log_food_data":
-                raise ValueError("Model did not call the expected function.")
-            
-            raw_args = response_part.function_call.args
-            
-            converted_items = self._convert_proto_map_to_dict(raw_args.get('items', []))
+                response_part = candidate.content.parts[0]
+                
+                if not response_part.function_call or response_part.function_call.name != "log_food_data":
+                    raise ValueError("Model did not call the expected function.")
+                
+                raw_args = response_part.function_call.args
+                
+                converted_items = self._convert_proto_map_to_dict(raw_args.get('items', []))
 
-            validate(instance=converted_items, schema=self.schema)
+                validate(instance=converted_items, schema=self.schema)
+                
+                response_data = {'items': converted_items}
+                return converted_items # Success, exit the loop
             
-            response_data = {'items': converted_items}
-            return converted_items
+            except (ValidationError, ValueError) as e:
+                error_msg = f"API response validation failed: {e}"
+                
+                # If it's the last attempt, re-raise the exception.
+                if attempt == 1:
+                    print(error_msg)
+                    raise SchemaValidationError(error_msg) from e
+                else:
+                    print(f"Attempt {attempt + 1} failed. Retrying in 1 second...")
+                    time.sleep(1)
             
-        except (ValidationError, ValueError) as e:
-            error_msg = f"API response validation failed: {e}"
-            # We still print for debugging, but now we raise a specific exception
-            print(error_msg)
-            raise SchemaValidationError(error_msg) from e
-        finally:
-            duration = time.time() - start_time
-            # Note: error_msg will only be set for handled exceptions now.
-            # Unhandled exceptions will propagate before this is set.
-            self._write_trace(description, request_data, response_data, duration, error_msg)
+            finally:
+                duration = time.time() - start_time
+                self._write_trace(description, request_data, response_data, duration, error_msg)
+        
+        return None # Should not be reached if logic is correct
