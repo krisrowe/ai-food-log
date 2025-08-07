@@ -61,20 +61,34 @@ This project uses a `Makefile` for common development tasks.
 
 ## ⚙️ Configuration
 
-### config.ini (Sensitive - Not in Git)
+Configuration is managed through environment variables and the `config.yaml` file.
 
-```ini
-[gemini]
-# Get your API key from: https://makersuite.google.com/app/apikey
-api_key = your_gemini_api_key_here
+### Environment Variables
 
-[google_sheets]
-# Google Sheets ID from the URL: https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit
-sheet_id = your_google_sheets_id_here
+Create a `.env` file in the project root for your secret keys. You can copy the example file to get started:
 
-# Path to your Google service account JSON key file
-# Download from: https://console.cloud.google.com/iam-admin/serviceaccounts
-service_account_key = path/to/your/service-account-key.json
+```bash
+cp .env.example .env
+```
+
+Then, edit your `.env` file:
+
+```env
+# .env
+
+# Used by the Gemini API client library
+GOOGLE_API_KEY="your_google_api_key_here"
+
+# Optional: Used by the Gemini CLI if that's your IDE of choice.
+# This may be the same as your GOOGLE_API_KEY.
+GEMINI_API_KEY="your_gemini_api_key_here"
+
+# Optional: For Google Sheets integration
+# The ID of your Google Sheet, found in its URL
+GOOGLE_SHEETS_ID="your_google_sheets_id_here"
+
+# Optional: The path to your Google Cloud service account JSON key file for Sheets integration
+GOOGLE_APPLICATION_CREDENTIALS="path/to/your/service-account-key.json"
 ```
 
 ### config.yaml (Non-sensitive - In Git)

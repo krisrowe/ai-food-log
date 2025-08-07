@@ -133,7 +133,7 @@ ai_api_trace.log
 gemini_trace.log
 
 # Configuration files with sensitive data
-config.ini
+
 *.key
 *.pem
 

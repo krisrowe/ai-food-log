@@ -24,15 +24,14 @@ help:
 # Setup virtual environment and install dependencies
 setup:
 	@echo "🔧 Setting up virtual environment..."
-	python3 -m venv venv
+	@python3 -m venv venv
 	@echo "📦 Installing dependencies..."
-	./venv/bin/pip install -r requirements.txt
+	@./venv/bin/pip install -r requirements.txt
 	@echo "✅ Setup complete!"
 	@echo ""
 	@echo "Next steps:"
-	@echo "1. Copy config.ini.example to config.ini"
-	@echo "2. Add your Gemini API key to config.ini"
-	@echo "3. Run: make log FOOD=\"your food description\""
+	@echo "1. Copy .env.example to .env and add your API keys."
+	@echo "2. Run: make log FOOD=\"your food description\""
 
 # Log food consumption (requires FOOD parameter)
 log:
@@ -67,16 +66,17 @@ log-sheets:
 	@cd $(PROJECT_DIR) && PYTHONPATH=. ./venv/bin/python3 -m src.food_logger "$(FOOD)" --sheets
 
 # Run all tests
-test:
-	@echo "🧪 Running all tests (unit and integration)..."
-	@if [ ! -f config.ini ]; then \
-		echo "⚠️ Warning: config.ini not found. Integration tests will be skipped."; \
-		echo "Running unit tests only..."; \
-		PYTHONPATH=src ./venv/bin/pytest tests/unit/ -v; \
-	else \
-		PYTHONPATH=src ./venv/bin/pytest -v; \
-	fi
+test: test-unit test-integration
 
+# Run unit tests
+test-unit:
+	@echo "🧪 Running unit tests..."
+	@PYTHONPATH=src ./venv/bin/pytest tests/unit/ -v
+
+# Run integration tests
+test-integration:
+	@echo "🧪 Running integration tests..."
+	@PYTHONPATH=src ./venv/bin/pytest tests/integration/ -v
 
 # Enable AI API tracing
 trace-on:
@@ -93,33 +93,30 @@ trace-off:
 # Clean up generated files
 clean:
 	@echo "🧹 Cleaning up..."
-	rm -rf venv
-	rm -rf __pycache__
-	rm -rf .pytest_cache
-	rm -rf src/**/__pycache__
-	rm -rf tests/**/__pycache__
-	rm -f ai_api_trace.log
-	rm -f *.db
+	@rm -rf venv
+	@rm -rf __pycache__
+	@rm -rf .pytest_cache
+	@rm -rf src/**/__pycache__
+	@rm -rf tests/**/__pycache__
+	@rm -f ai_api_trace.log
+	@rm -f *.db
+	@find . -name "*.csv" -type f -delete
 	@echo "✅ Cleanup complete!"
-
-# Development helpers
-dev-setup: setup
-	@echo "🔧 Setting up development environment..."
-	./venv/bin/pip install -e .
-	@echo "✅ Development setup complete!"
 
 # Check configuration
 check-config:
 	@echo "🔍 Checking configuration..."
-	@if [ -f config.ini ]; then \
-		echo "✅ config.ini exists"; \
-		if grep -q "your_gemini_api_key_here" config.ini; then \
-			echo "❌ Please set your Gemini API key in config.ini"; \
+	@if [ -f .env ]; then \
+		echo "✅ .env file exists"; \
+		if grep -q "GOOGLE_API_KEY=your_google_api_key_here" .env; then \
+			echo "❌ Please set your GOOGLE_API_KEY in .env"; \
+		elif ! grep -q "GOOGLE_API_KEY" .env; then \
+			echo "❌ GOOGLE_API_KEY is not set in .env"; \
 		else \
-			echo "✅ Gemini API key configured"; \
+			echo "✅ GOOGLE_API_KEY is configured"; \
 		fi; \
 	else \
-		echo "❌ config.ini not found - copy from config.ini.example"; \
+		echo "❌ .env file not found - copy from .env.example"; \
 	fi
 	@if [ -f config.yaml ]; then \
 		echo "✅ config.yaml exists"; \

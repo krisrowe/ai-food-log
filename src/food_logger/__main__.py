@@ -6,12 +6,7 @@ Allows running: python -m src.food_logger "food description"
 
 import sys
 import yaml
-from dotenv import load_dotenv
 from .food_logger_service import FoodLoggerService
-from .models import FinalResult
-
-# Load environment variables from .env file
-load_dotenv()
 
 def format_console_output(result: FinalResult) -> str:
     """Format analysis results for console display"""

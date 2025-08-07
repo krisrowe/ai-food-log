@@ -1,11 +1,15 @@
 """
 Gemini API Client for Food Analysis
 """
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+# This must be done before importing google.generativeai
+load_dotenv()
 
 import os
 import json
 import time
-import configparser
 import yaml
 from datetime import datetime
 from typing import Optional, List, Dict
@@ -14,6 +18,7 @@ from google.generativeai.types import FunctionDeclaration, Tool
 from jsonschema import validate, ValidationError
 from proto.marshal.collections import maps
 from proto.marshal.collections import repeated
+
 
 class SchemaValidationError(ValueError):
     """Custom exception for schema validation errors."""
